@@ -1,0 +1,26 @@
+{
+  "name": "knowledge-os",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Ferramenta pessoal de gestão do conhecimento: notas ricas + canvas infinito + tabelas relacionais + busca híbrida.",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.5.0",
+    "globals": "^17.7.0",
+    "turbo": "^2.9.18",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.62.0"
+  }
+}

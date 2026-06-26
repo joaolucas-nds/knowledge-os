@@ -1,0 +1,21 @@
+{
+  "name": "@knowledge-os/crdt",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Wrappers do Automerge 2.0 para sincronização CRDT — ESQUELETO. Implementação completa é F5 do ROADMAP.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --max-warnings=0",
+    "clean": "rm -rf dist *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@automerge/automerge": "^3.2.6"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

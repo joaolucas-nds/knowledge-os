@@ -1,0 +1,38 @@
+# Dependências
+node_modules/
+.pnpm-store/
+
+# Builds
+dist/
+build/
+.next/
+.turbo/
+*.tsbuildinfo
+
+# Variáveis de ambiente (nunca commitar segredos reais)
+.env
+.env.local
+.env.*.local
+
+# SQLite / OPFS local (dev)
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# IDE / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Drizzle (migrations SQL ficam no Git; cache local não)
+packages/db/drizzle/meta/_journal.json.bak
+
+# Coverage
+coverage/

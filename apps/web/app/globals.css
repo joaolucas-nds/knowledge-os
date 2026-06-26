@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+/*
+ * Tailwind v4 é CSS-first: tokens de design (cores, fontes, breakpoints)
+ * serão customizados aqui via @theme quando a F2 (Canvas/UI) chegar.
+ * Não criar tailwind.config.js a menos que surja uma necessidade que o
+ * @theme não resolva — ver busca desta sessão sobre o modelo v4.
+ */

@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancela execuções anteriores do mesmo PR/branch ao chegar um push novo —
+# evita gastar minutos de CI rodando algo que já ficou obsoleto.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck-and-lint:
+    name: Typecheck + Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Instalar dependências
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck (todos os workspaces via Turborepo)
+        run: pnpm typecheck
+
+      - name: Lint (todos os workspaces via Turborepo)
+        run: pnpm lint
