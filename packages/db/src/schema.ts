@@ -8,9 +8,9 @@
  *
  * Ver DECISIONS.md:
  *   - DEC-002 ("Tudo é um Block" como entidade universal)
- *   - DEC-003 (Local-First com wa-sqlite + OPFS — este schema é o espelho
- *     Postgres/backend; o schema local-first em SQLite é replicado por
- *     migrations equivalentes em apps/web/lib/sqlite, ainda não criado)
+ *   - DEC-011 (modelo online-first single-user — este Postgres é a ÚNICA
+ *     fonte de verdade, não um espelho de algo local; supersede DEC-003)
+ *   - DEC-012 (Postgres hospedado no Supabase)
  */
 
 import {
@@ -76,15 +76,6 @@ export const blocks = pgTable(
 
     /** Soft delete — nunca DELETE físico, para não quebrar relations/backlinks. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
-
-    /**
-     * Documento Automerge serializado (BYTEA → aqui modelado como bytes
-     * via "text" base64 seria impreciso; usamos jsonb apenas como
-     * placeholder estrutural nesta F0 — a coluna real BYTEA e a
-     * integração com @automerge/automerge ficam para a F5, junto com
-     * packages/crdt. Não escrever nesta coluna antes da F5).
-     */
-    crdtState: jsonb("crdt_state"),
   },
   (table) => [
     index("idx_blocks_parent").on(table.parentId),

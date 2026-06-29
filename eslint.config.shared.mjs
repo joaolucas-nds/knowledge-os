@@ -4,7 +4,7 @@ import globals from "globals";
 
 /**
  * Base de ESLint (flat config) compartilhada pelos packages Node puros
- * do monorepo: packages/db, packages/crdt, packages/ui e apps/api.
+ * do monorepo: packages/db, packages/ui e apps/api.
  *
  * apps/web NÃO importa este arquivo — tem seu próprio eslint.config.mjs
  * porque depende de eslint-config-next, cujos plugins transitivos

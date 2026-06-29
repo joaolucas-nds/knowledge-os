@@ -1,6 +1,6 @@
 # Knowledge OS
 
-Ferramenta pessoal de gestão do conhecimento: notas ricas + canvas infinito + tabelas relacionais + busca híbrida. Web-First, Offline-First (local-first — o servidor sincroniza, não é a fonte de verdade).
+Ferramenta pessoal de gestão do conhecimento: notas ricas + canvas infinito + tabelas relacionais + busca híbrida. Online-first, single-user — o Postgres (hospedado no Supabase) é a única fonte de verdade, acessível de qualquer máquina. Sem requisito de edição offline (ver DEC-011).
 
 Arquitetura completa, decisões e roadmap: ver `CONTEXT.md`, `DECISIONS.md` e `ROADMAP.md` na documentação do projeto.
 
@@ -11,17 +11,18 @@ Arquitetura completa, decisões e roadmap: ver `CONTEXT.md`, `DECISIONS.md` e `R
 ## Stack
 
 - **Monorepo:** Turborepo + pnpm workspaces
-- **Frontend (`apps/web`):** Next.js 16 (App Router, Turbopack)
+- **Frontend (`apps/web`):** Next.js 16 (App Router, Turbopack) — deploy na Vercel (DEC-013)
 - **Backend (`apps/api`):** Fastify 5
-- **Banco:** PostgreSQL + Drizzle ORM (`packages/db`)
-- **CRDT:** Automerge (`packages/crdt` — esqueleto, implementação real na F5)
+- **Banco:** PostgreSQL hospedado no Supabase + Drizzle ORM (`packages/db`) — ver DEC-011/DEC-012
+- **Auth:** Supabase Auth (single-user)
+- **Imagens:** Supabase Storage (DEC-012)
 - **UI compartilhada:** `packages/ui` — esqueleto, primeiros componentes reais na F2
 
 ## Pré-requisitos
 
 - Node.js ≥ 22
 - pnpm 11.9.0 (`npm install -g pnpm`, ou deixe o Corepack resolver pelo campo `packageManager`)
-- PostgreSQL rodando localmente (ou em Docker) — opcional nesta F0; a API sobe sem banco e reporta isso em `/health/db`
+- Uma conta e um projeto criados no [Supabase](https://supabase.com) (free tier serve para uso pessoal) — fornece a `DATABASE_URL`, as chaves de Auth e o Storage. Ver `SETUP.md` para o passo a passo.
 
 ## Setup
 

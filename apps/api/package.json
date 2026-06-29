@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Backend Fastify: REST base, sync CRDT (F5) e busca semântica (F6).",
+  "description": "Backend Fastify: REST base sobre Postgres (Supabase) e busca semântica (F6).",
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=.env src/index.ts",
     "build": "tsc -p tsconfig.json",

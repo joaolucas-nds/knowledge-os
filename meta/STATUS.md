@@ -7,38 +7,35 @@
 ---
 
 ## Versão Atual
-**[0.1.0]** — 2026-06-24 — primeiro código real do projeto. F0 (Fundação Técnica) parcialmente concluída e validada de ponta a ponta contra um Postgres real.
+**[0.2.0]** — 2026-06-26 — pivô arquitetural: online-first single-user com Supabase, substituindo o plano Local-First + CRDT. Código ajustado e revalidado; falta a integração real com um projeto Supabase de verdade.
 
-## ✅ Funcionando (validado de fato, não só "parece certo")
-- **Monorepo Turborepo + pnpm** criado e funcional: `apps/web`, `apps/api`, `packages/db`, `packages/crdt`, `packages/ui` — todos com TypeScript strict.
-- **`pnpm typecheck`** (turbo, 5 workspaces) — ✅ passa limpo.
-- **`pnpm lint`** (ESLint flat config, 5 workspaces, `--max-warnings=0`) — ✅ passa limpo. `apps/web` usa `eslint-config-next` (ESLint ^9); os demais usam ESLint ^10 (ver DEC-010).
-- **`packages/db`** — schema Drizzle inicial (`blocks`, `relations`, escopo da F0 — ver ROADMAP). Migration gerada (`drizzle/0000_shiny_gertrude_yorkes.sql`) e **aplicada contra um Postgres 16 real**; smoke test de insert+select via Drizzle passou.
-- **`apps/api`** — Fastify 5 com `/health` e `/health/db`. Testado ao vivo: `/health/db` retorna `"ok"` com o Postgres real rodando (ver FIX-001 sobre o bug de `.env` corrigido no caminho).
-- **`apps/web`** — Next.js 16 (Turbopack) com home page (Server Component) que busca `/health` da API ao vivo e mostra o status. `next build` de produção testado e passou. Dev server testado ao vivo: renderizou "✓ apps/api respondeu" com a API real rodando.
-- **CI** (`.github/workflows/ci.yml`) — typecheck + lint via GitHub Actions, ainda não testado em um push real (só localmente, comando a comando).
-- **`packages/crdt`** e **`packages/ui`** — esqueletos intencionais (sem lógica real ainda), compilando e lintando limpo. Dependências já resolvidas e fixadas (`@automerge/automerge`, `react`).
+## ✅ Funcionando (validado de fato)
+- **Monorepo Turborepo + pnpm** com 4 workspaces (`apps/web`, `apps/api`, `packages/db`, `packages/ui`) — `packages/crdt` foi removido (ver DEC-011).
+- **`pnpm typecheck`** e **`pnpm lint`** — ✅ passam limpo nos 4 workspaces, revalidados após a remoção do CRDT.
+- **`packages/db`** — schema sem a coluna `crdt_state` (removida). Duas migrations agora: criação original + a que remove a coluna. Ambas geradas e **aplicadas com sucesso contra um Postgres real** (local, só para validar a migration — não é mais o destino final).
+- **`apps/api`** — Fastify com `/health` e `/health/db`, sem mudanças de comportamento nesta sessão (a troca de Postgres local→Supabase é o próximo passo).
+- **`apps/web`** — Next.js 16, sem mudanças de código nesta sessão.
 
-## 🔧 Em Progresso (resta da F0)
-- **wa-sqlite + OPFS no browser** — não iniciado. É o próximo passo desta fase.
-- **Autenticação (Better Auth ou Clerk)** — não iniciado, ainda não decidido qual dos dois.
-- **"Primeiro Block criado e persistido localmente"** (critério de conclusão da F0) — só foi validado no Postgres do backend, não no SQLite local-first do browser (que depende do item acima).
+## 🔧 Em Progresso
+- **Conta e projeto no Supabase** — guia de criação entregue em SETUP.md; depende de você executar os passos lá (eu não posso criar a conta por você).
+- **Integração de código com o Supabase** (próximo passo, depende do item acima): ajuste de SSL no `packages/db/src/client.ts`, variáveis de ambiente novas, login via Supabase Auth no `apps/web`, middleware de verificação de JWT no `apps/api`.
+- **Deploy em produção** (Vercel + host do `apps/api`) — planejado para a F5 revisada do ROADMAP, ainda não iniciado.
 
 ## ❌ Quebrado / Com Problema
-- Nenhum bug aberto. O único bug encontrado nesta sessão (apps/api não carregava `.env`) foi corrigido e validado — ver FIX-001 em DECISIONS.md.
+- Nenhum bug aberto.
 
 ## 📋 Backlog (curto prazo — itens acionáveis)
-- [ ] Setup wa-sqlite + OPFS no browser (Worker, WAL mode — decidir VFS específico, provavelmente `AccessHandlePoolVFS`, ao implementar).
-- [ ] Decidir Better Auth vs. Clerk e implementar login/logout.
-- [ ] Primeira tela real de criação de Block (substituindo o card de health-check da home page).
-- [ ] Validar o workflow de CI num push real ao GitHub (criado mas não exercitado).
-- [ ] Revisitar DEC-004 (Automerge) com a API real da v3.x quando a F5 chegar — `packages/crdt` hoje é só esqueleto.
+- [ ] Você: criar conta/projeto no Supabase (SETUP.md) e ter as credenciais à mão.
+- [ ] Eu: adaptar `client.ts` (SSL), `.env.example` (novo formato de `DATABASE_URL`), implementar login Supabase Auth no `apps/web` e middleware de JWT no `apps/api`.
+- [ ] Decidir host do `apps/api` para deploy (Render vs. Fly.io) — pendente até a F5 do ROADMAP.
+- [ ] Validar Supabase Storage para upload de imagem (ou trocar por R2, se o 1GB grátis não bastar).
 
 ## 📁 Arquivos Críticos (não mexer sem contexto)
-- `packages/db/src/schema.ts` — schema Drizzle compartilhado; qualquer mudança exige nova migration (`pnpm --filter @knowledge-os/db db:generate`) em todos os ambientes.
-- `packages/db/drizzle/` — migrations já geradas e aplicadas; não editar arquivos `.sql` já commitados à mão — gerar uma nova migration para qualquer mudança.
-- `apps/api/src/env.ts` — única porta de entrada das variáveis de ambiente da API; depende de `--env-file-if-exists` nos scripts `dev`/`start` do `package.json` (ver FIX-001) para funcionar em dev.
-- `pnpm-workspace.yaml` — contém `allowBuilds:` (aprovação de scripts nativos de esbuild/sharp/unrs-resolver); não remover essa seção ou instalações futuras voltam a travar.
+- `packages/db/src/schema.ts` — schema Drizzle compartilhado; qualquer mudança exige nova migration (`pnpm --filter @knowledge-os/db db:generate`) em todos os ambientes. **Não tem mais coluna `crdt_state`** desde esta sessão.
+- `packages/db/drizzle/` — duas migrations já geradas e aplicadas (local, para validação); não editar `.sql` já commitados — gerar nova migration para qualquer mudança futura.
+- `apps/api/src/env.ts` — única porta de entrada das variáveis de ambiente da API; depende de `--env-file-if-exists` nos scripts `dev`/`start` (ver FIX-001).
+- `pnpm-workspace.yaml` — contém `allowBuilds:`; não remover essa seção.
+- `SETUP.md` — guia de criação da conta Supabase; será reescrito de novo quando a integração de código estiver pronta (próxima sessão).
 
 ## 💬 Última Sessão
-**2026-06-24** — Implementação real da F0: monorepo Turborepo+pnpm criado, 5 workspaces com TS strict + ESLint. Schema Drizzle (blocks+relations) migrado e testado contra Postgres real. API Fastify com health checks (bug de `.env` encontrado e corrigido — FIX-001). Next.js 16 (não 15 — ver DEC-009) validado com build de produção e dev server real conversando com a API. CI básico criado. Próximo passo: wa-sqlite+OPFS no browser.
+**2026-06-26** — Pivô de arquitetura: o usuário esclareceu que o uso é single-user e não precisa de edição offline. Decidido (DEC-011/012/013): modelo online-first com Postgres no Supabase como única fonte de verdade (substitui Local-First + CRDT), Fastify mantido como camada de API sobre o Supabase (não substituído pela API automática dele), Supabase Auth para login, Supabase Storage para imagens, Vercel para o frontend (Cloudflare Pages avaliado e descartado — suporte a Next.js via Workers/OpenNext não é confiável no Windows). Código ajustado: `packages/crdt` removido, coluna `crdt_state` removida do schema (nova migration gerada e validada contra Postgres real). Todos os 4 workspaces revalidados (typecheck + lint limpos). Entregue SETUP.md com o passo a passo de criação da conta/projeto Supabase. Próximo passo: usuário cria o projeto Supabase; assistente implementa a integração de código (conexão SSL, Auth, Storage).

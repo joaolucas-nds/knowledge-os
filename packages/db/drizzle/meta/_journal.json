@@ -8,6 +8,13 @@
       "when": 1782298857414,
       "tag": "0000_shiny_gertrude_yorkes",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1782697039131,
+      "tag": "0001_known_shinko_yamashiro",
+      "breakpoints": true
     }
   ]
 }

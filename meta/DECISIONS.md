@@ -44,7 +44,9 @@ Qualquer edição em qualquer visão reflete imediatamente em todas as outras (m
 ---
 
 ## DEC-003 — Local-First com wa-sqlite + OPFS
-**Data:** 2026-06-05 · **Status:** aceita
+**Data:** 2026-06-05 · **Status:** SUPERADA por DEC-011 (2026-06-26)
+
+> Esta decisão valia para um modelo multi-dispositivo *offline-capable*. O projeto pivotou para online-first single-user (ver DEC-011) — wa-sqlite/OPFS não chegou a ser implementado (ficou pendente em duas sessões seguidas) e deixou de ser necessário. Entrada mantida íntegra abaixo por registro histórico do raciocínio original.
 
 ### Contexto
 O produto precisa funcionar 100% offline (avião, internet instável, preferência do usuário). A persistência deve ser robusta, sem limite de 5MB do localStorage e com suporte a SQL completo para queries relacionais e FTS5.
@@ -64,7 +66,9 @@ Queries SQL completas no browser, incluindo FTS5 para busca offline. OPFS garant
 ---
 
 ## DEC-004 — Automerge 2.0 para sincronização CRDT
-**Data:** 2026-06-05 · **Status:** aceita
+**Data:** 2026-06-05 · **Status:** SUPERADA por DEC-011 (2026-06-26)
+
+> Esta decisão resolvia conflito de edição concorrente offline — cenário que não existe num projeto single-user online-first (ver DEC-011). `packages/crdt` (esqueleto criado na sessão de F0) foi removido do monorepo. Entrada mantida íntegra abaixo por registro histórico.
 
 ### Contexto
 Com múltiplos dispositivos e possibilidade de edição offline, precisamos de uma estratégia de merge que resolva conflitos deterministicamente sem exigir lock ou "último a salvar vence".
@@ -203,3 +207,68 @@ Cada workspace tem seu próprio `eslint.config.mjs` (não um único arquivo na r
 - **Causa raiz:** `loadEnv()` (em `src/env.ts`) lê direto de `process.env`. Nada no boot da aplicação carregava o arquivo `.env` para dentro de `process.env` antes disso — nem o pacote `dotenv`, nem uma flag do Node. O `.env.example` dava a falsa sensação de que "copiar e preencher" bastava.
 - **Solução:** os scripts `dev` e `start` do `apps/api` passaram a usar a flag nativa do Node 22 `--env-file-if-exists=<arquivo>` (`tsx watch --env-file-if-exists=.env src/index.ts` / `node --env-file-if-exists=.env dist/index.js`). Escolhida em vez do pacote `dotenv` por dois motivos: (1) zero dependência nova; (2) a variante `-if-exists` não falha quando o arquivo não existe — essencial em produção (Railway/Fly.io), onde as variáveis chegam injetadas pela plataforma, sem arquivo `.env` físico. `packages/db/drizzle.config.ts` continua usando `import "dotenv/config"` porque é executado pela CLI do drizzle-kit, não pelos nossos scripts — ali o pacote `dotenv` é o jeito certo mesmo.
 - **Lição:** existir um `.env.example` não garante que o `.env` seja de fato carregado — sempre validar o caminho completo (variável realmente chegando em `process.env` dentro do processo) antes de assumir que está pronto. Encontrado batendo em `/health/db` de verdade contra um Postgres local: respondeu `"not_configured"` antes da correção e `"ok"` depois — só a chamada real revelou o problema, a leitura do código não seria suficiente.
+
+---
+
+## DEC-011 — Modelo "online-first, single-user" substitui Local-First + CRDT
+**Data:** 2026-06-26 · **Status:** aceita · **SUPERA DEC-003 e DEC-004**
+
+### Contexto
+O projeto foi desenhado originalmente (sessão de 2026-06-05) para um cenário multi-dispositivo *offline-capable*: editar sem internet em qualquer aparelho e sincronizar depois, com merge automático de conflitos. Esse cenário exige uma pilha cara — wa-sqlite+OPFS no browser (DEC-003) e CRDT via Automerge (DEC-004) — porque resolver "duas edições concorrentes da mesma nota, feitas offline, em dispositivos diferentes" sem perder dados é um problema genuinamente difícil.
+
+Ao retomar o projeto para uso real (sessão de 2026-06-26), o usuário esclareceu dois pontos que mudam o problema: (1) o uso é **single-user** — só uma pessoa, nunca uma equipe; (2) **não há requisito de edição offline** — o uso é sempre com internet, só precisa funcionar a partir de máquinas diferentes. Sob essas duas condições, o cenário que o CRDT resolve (conflito concorrente offline) deixa de existir: com uma fonte única de verdade sempre acessível (Postgres na nuvem) e um usuário só, duas escritas na mesma nota ao mesmo tempo são uma exceção rara (ex.: duas abas abertas), não a norma — e nem precisam de merge automático, só de o usuário não fazer isso (ou, na pior das hipóteses, "o que salvar por último vence" é uma perda aceitável, não um problema sistêmico).
+
+Sinal adicional, não só teórico: `wa-sqlite+OPFS` e a integração real do `packages/crdt` ficaram como pendência em **duas sessões seguidas** de implementação (ver STATUS.md de 2026-06-24) — nenhuma das duas chegou a ser sequer iniciada, enquanto o resto da F0 avançou e foi validado de ponta a ponta. Isso é evidência prática de que a complexidade não estava compensando para este projeto específico.
+
+### Decisão
+Adotar um modelo online-first: o Postgres (agora hospedado, ver DEC-012) é a **única** fonte de verdade. Não há cópia local persistente do banco no browser, não há documento CRDT por Block, não há servidor de sincronização dedicado (Hocuspocus). Cada dispositivo lê e escreve direto no mesmo banco central via a API (`apps/api`). "Multi-dispositivo" passa a ser um efeito colateral natural de ter uma única fonte de dados acessível pela internet — não uma feature que precisa de arquitetura própria.
+
+Removido do monorepo: `packages/crdt` (esqueleto criado na F0, nunca usado em produção). Removida do plano: a integração wa-sqlite/OPFS no `apps/web`. Schema Drizzle (`blocks`, `relations`) **não muda** — o modelo "tudo é um Block" é ortogonal a onde o Postgres mora.
+
+### Alternativas consideradas
+- **Manter o plano CRDT "para o futuro, caso um dia precise"** — rejeitada: arquitetura especulativa para um requisito que o próprio usuário confirmou não ter. Carregar essa complexidade agora, sem uso real dela, é exatamente o tipo de dívida que esta mesma sessão está cortando.
+- **Versão simplificada de CRDT só para "duas abas abertas"** — considerada e descartada por ora: Supabase Realtime (ver DEC-012) cobre o caso prático ("avisar a aba aberta que algo mudou") a um custo muito menor que adaptar Automerge para esse cenário restrito. Revisitar se algum dia o uso real mostrar que isso não basta.
+- **Suporte offline básico via Service Worker + fila de escrita** (sem CRDT completo) — não descartada, só **adiada**: é a forma natural de adicionar "editar no avião" no futuro, se vier a ser necessário, sem reviver todo o aparato de CRDT. Registrada em IDEAS.md para não perder a ideia.
+
+### Consequências
+Simplificação grande: cai uma dependência inteira (`@automerge/automerge`), um conceito de servidor inteiro (Hocuspocus/WebSocket de sync), e toda a complexidade de inicialização do wa-sqlite (Worker, VFS, WAL) no browser. O ROADMAP perde a F5 original ("Sincronização e Colaboração via CRDT") — substituída por uma F5 sobre deploy real em produção (ver ROADMAP.md). Custo: se o projeto algum dia precisar mesmo de offline ou de múltiplos usuários reais, essa arquitetura terá que ser revisitada do zero — decisão consciente de não pagar esse custo agora por um requisito que não existe hoje.
+
+---
+
+## DEC-012 — Supabase como provedor de Postgres + Auth + Storage; Fastify mantido como camada de API
+**Data:** 2026-06-26 · **Status:** aceita
+
+### Contexto
+Decidido o modelo online-first (DEC-011), falta escolher onde o Postgres mora, como resolver login (single-user) e onde guardar imagens — e decidir se o `apps/api` (Fastify, validado na F0) continua existindo ou é substituído pela API automática que serviços como o Supabase geram sobre o próprio Postgres.
+
+### Decisão
+- **Banco:** Postgres hospedado no **Supabase** (free tier para começar — 500 MB de banco, suficiente para muito tempo de uso pessoal só com texto). `packages/db` não muda de schema; só troca a `DATABASE_URL` (do Postgres local para a connection string do Supabase) e passa a exigir SSL na conexão.
+- **Login:** **Supabase Auth**, configurado para um único usuário (você) — sem tela pública de cadastro. O `apps/web` (Next.js) cuida da UI de login via `supabase-js`; o `apps/api` (Fastify) verifica o token (JWT) que o Supabase emite em cada request, num middleware pequeno — sem reinventar hash de senha, sessão, etc.
+- **Imagens:** **Supabase Storage** para começar (1 GB grátis), guardando no Postgres só a URL do arquivo, nunca o binário. Cloudflare R2 (10 GB grátis, sem cobrança de egress) fica registrado como alternativa de troca direta se o 1 GB for insuficiente — não é decisão definitiva, é a porta de entrada mais simples (uma conta a menos para gerenciar agora).
+- **`apps/api` (Fastify) é mantido**, não substituído pela API automática do Supabase (PostgREST). Continua sendo o único lugar que fala com o Postgres via Drizzle.
+
+### Alternativas consideradas
+- **Eliminar o Fastify, `apps/web` fala direto com o Supabase via `supabase-js`** — considerada seriamente (menos uma peça para hospedar). Rejeitada por ora: jogaria fora o `apps/api` inteiro, já validado de ponta a ponta na sessão de F0 (schema, migration, smoke test, health checks reais), por uma reescrita não estritamente necessária agora. Mudança grande demais para o ganho atual — fica registrada como opção real para o futuro, se a manutenção de duas pontas (Fastify + Supabase) se mostrar mais trabalho do que vale.
+- **Auth próprio (senha única em variável de ambiente, sem Supabase Auth)** — rejeitada: é menos código só na aparência. Supabase Auth já resolve hash de senha, sessão, expiração de token, tudo de forma testada em produção, de graça — reinventar isso mal é o tipo de "simplicidade" que custa mais caro depois (vulnerabilidade, bug de sessão).
+- **Render/Railway/Neon (Postgres) sem o resto do pacote Supabase** — rejeitada: exigiria juntar 3 serviços separados (banco + auth + storage) em vez de 1, sem ganho real para um projeto pessoal pequeno. Supabase entrega os três com uma única conta e um único free tier.
+
+### Consequências
+`apps/api` continua precisando de um host sempre ligado (não é mais "só roda no seu PC") para que outros dispositivos o alcancem — escolha do host (Render/Fly.io, ambos com tier grátis) fica para a sessão de implementação. `client.ts` do `packages/db` precisa de ajuste de SSL na config do `Pool` (Supabase exige conexão criptografada) — pendente de validar com uma connection string real. Free tier do Supabase pausa o projeto após 7 dias sem uso — irrelevante para uso pessoal frequente, mas vale lembrar se for ficar muito tempo sem abrir o app.
+
+---
+
+## DEC-013 — Vercel para o frontend (não Cloudflare Pages)
+**Data:** 2026-06-26 · **Status:** aceita
+
+### Contexto
+O usuário considerou Cloudflare Pages como alternativa à Vercel para hospedar o `apps/web` (Next.js 16).
+
+### Decisão
+Usar **Vercel** para o deploy do `apps/web`.
+
+### Alternativas consideradas
+- **Cloudflare Pages** — rejeitada: a própria Cloudflare descontinuou a recomendação de "Pages" puro para Next.js (suporte só ao Edge Runtime, sem `next/image` completo). O caminho atual deles é Cloudflare *Workers* via adaptador OpenNext — que funciona, mas (a) exige uma camada de build extra (transformar a saída do Next para rodar no Workers), e (b) a própria documentação do OpenNext avisa que **suporte completo no Windows não é garantido** — relevante porque o ambiente de desenvolvimento é Windows. Para um projeto pessoal de um usuário só, sem necessidade de escala global nem economia de custo em volume, essa fricção extra não compensa.
+- **Vercel** — aceita: é a mantenedora do próprio Next.js, zero configuração adicional para Server Components, Cache Components e o modelo de fetch sem cache já usado na home page. Tier gratuito ("Hobby") cobre uso de um usuário só sem custo.
+
+### Consequências
+Nenhuma mudança de código necessária — o `apps/web` já está estruturado de forma compatível com deploy direto na Vercel (basta conectar o repositório). Cloudflare ainda entra no projeto, mas só como Storage (R2), se vier a substituir o Supabase Storage — papel bem mais simples que hospedar o app inteiro.

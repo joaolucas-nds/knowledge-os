@@ -17,7 +17,7 @@
 
 - **RRF (Reciprocal Rank Fusion)** — Algoritmo para fundir resultados de múltiplas fontes de busca (keyword + semântico) num ranking único. Fórmula: `score = 1/(60+rank_A) + 1/(60+rank_B)`. Os 60 é uma constante de suavização.
 
-- **Local-First** — Princípio arquitetural onde o app funciona 100% offline com dados locais. O servidor é canal de sincronização, não fonte de verdade primária.
+- **Online-First (single-user)** — Princípio arquitetural deste projeto desde 2026-06-26 (ver DEC-011): o Postgres hospedado (Supabase) é a única fonte de verdade, acessível de qualquer dispositivo com internet. Substitui o modelo "Local-First" original (offline com sincronização), descartado por não haver requisito real de edição offline para um usuário único.
 
 - **Wikilink** — Sintaxe `[[Nome da Nota]]` digitada no Tiptap que cria automaticamente uma `relation` do tipo `mention` entre o Block atual e o Block referenciado.
 
@@ -39,7 +39,9 @@
 
 - **SearchPalette** — Modal ativado por ⌘K. Executa busca no índice Orama local com < 5ms.
 
-- **CRDT state** — Campo `crdt_state` (BYTEA) em cada Block, contendo o documento Automerge serializado. Nunca editar diretamente — usar sempre a API do Automerge.
+- **`wa-sqlite`** *(termo histórico — descartado, ver DEC-011)* — biblioteca que compilaria SQLite para WASM no browser; chegou a ser planejada (DEC-003, superada) mas nunca implementada. Mantido aqui só para quem encontrar a referência em logs antigos.
+
+- **Automerge / CRDT** *(termo histórico — descartado, ver DEC-011)* — biblioteca de sincronização com resolução automática de conflito; planejada (DEC-004, superada) para um cenário multi-dispositivo offline que não se aplica a um projeto single-user online-first. `packages/crdt` (esqueleto criado na F0) foi removido do monorepo.
 
 ---
 
@@ -47,13 +49,9 @@
 
 - **`useVisibleNodes(canvasId)`** — Hook que consulta o RBush spatial index e retorna IDs dos nós visíveis no viewport atual. É a peça-chave do frustum culling.
 
-- **`useBlock(blockId)`** — Hook reativo que lê um Block do SQLite local e re-renderiza quando o Block muda. Base de todos os shapes e visões.
+- **`useBlock(blockId)`** — Hook reativo que lê um Block do backend (via `apps/api`, que lê do Postgres) e re-renderiza quando o Block muda. Base de todos os shapes e visões.
 
 - **`useBacklinks(blockId)`** — Hook que faz query em `relations WHERE to_block = blockId` e retorna todos os Blocks que mencionam o Block atual.
-
-- **`wa-sqlite`** — Biblioteca que compila o SQLite para WebAssembly e o executa no browser. Usada com backend OPFS para persistência durável.
-
-- **`OPFS`** — Origin Private File System. API do browser para escrita de arquivos locais sem prompts ao usuário. Suportado em Chrome 86+, Firefox 111+, Safari 15.2+.
 
 ---
 

@@ -5,6 +5,25 @@
 
 ---
 
+## [0.2.0] — 2026-06-26
+### Alterado
+- **Pivô arquitetural:** modelo passa de Local-First+CRDT (multi-dispositivo offline) para Online-First single-user (Postgres no Supabase como única fonte de verdade) — ver DEC-011. Decisão do usuário: uso é só por uma pessoa, sem requisito de edição offline.
+- `packages/db/src/schema.ts`: removida a coluna `crdt_state` (obsoleta) — nova migration gerada e validada contra Postgres real.
+- `README.md`, `CONTEXT.md`, `GLOSSARY.md`: atualizados para refletir o modelo online-first (Supabase, Vercel) em vez do Local-First original.
+
+### Removido
+- `packages/crdt` — esqueleto de Automerge removido do monorepo (não chegou a ser usado em produção).
+
+### Decidido
+- DEC-011: modelo online-first single-user substitui Local-First + CRDT (supera DEC-003 e DEC-004).
+- DEC-012: Supabase como provedor de Postgres + Auth + Storage; Fastify mantido como camada de API.
+- DEC-013: Vercel para o frontend (Cloudflare Pages avaliado e descartado).
+
+### Adicionado
+- `SETUP.md`: guia de criação de conta/projeto no Supabase (substitui a versão anterior, sobre PostgreSQL local).
+
+---
+
 ## [0.1.0] — 2026-06-24
 ### Adicionado
 - Monorepo Turborepo + pnpm workspaces criado e funcional: `apps/web`, `apps/api`, `packages/db`, `packages/crdt`, `packages/ui` (ver DEC-008).

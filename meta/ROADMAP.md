@@ -7,16 +7,17 @@
 ---
 
 ## 🟡 F0 — Fundação Técnica *(em curso)*
-**Objetivo:** Repositório existindo, stack rodando, autenticação funcional. "Hello World" que persiste no SQLite local.
-**Critério de conclusão:** `apps/web` e `apps/api` rodando em dev; wa-sqlite inicializando com OPFS; primeiro Block criado e persistido localmente; login/logout funcionando.
+**Objetivo:** Repositório existindo, stack rodando, autenticação funcional. "Hello World" persistido no Postgres hospedado, acessível de qualquer máquina.
+**Critério de conclusão:** `apps/web` e `apps/api` rodando; Postgres no Supabase com a migration aplicada; primeiro Block criado e persistido lá; login via Supabase Auth funcionando.
 **Estimativa:** Semanas 1–2
 
-- [x] Criar repositório com estrutura Turborepo (`apps/web`, `apps/api`, `packages/db`, `packages/crdt`, `packages/ui`) — pnpm workspaces (ver DEC-008).
+- [x] Criar repositório com estrutura Turborepo (`apps/web`, `apps/api`, `packages/db`, `packages/ui`) — pnpm workspaces (ver DEC-008).
 - [x] Configurar TypeScript strict em todos os packages.
-- [ ] Setup wa-sqlite + OPFS no browser (Worker, WAL mode, migrations automáticas) — próximo passo.
-- [x] Schema Drizzle inicial: tabelas `blocks` e `relations` — migration gerada e aplicada contra Postgres real.
+- [x] Schema Drizzle inicial: tabelas `blocks` e `relations` — migration gerada e aplicada contra Postgres real (local, para validação).
 - [x] API REST base com Fastify (health check, CORS, rate limit).
-- [ ] Autenticação com Better Auth ou Clerk — ainda não decidido qual dos dois.
+- [x] Criar conta e projeto no Supabase (banco + Auth + Storage) — guia em SETUP.md.
+- [ ] Apontar `DATABASE_URL` para o Postgres do Supabase (ajuste de SSL no `client.ts`) e reaplicar a migration lá.
+- [ ] Implementar login single-user com Supabase Auth (`supabase-js` no `apps/web` + verificação de JWT no `apps/api`) — ver DEC-012.
 - [x] CI básico no GitHub Actions (typecheck + lint) — criado, ainda não exercitado por um push real.
 
 ---
@@ -81,17 +82,17 @@
 
 ---
 
-## 🔵 F5 — Sincronização e Colaboração *(futura)*
-**Objetivo:** Múltiplos dispositivos com merge offline→online determinístico, sem perda de dados.
-**Critério de conclusão:** Editar nota no celular offline, reconectar, ver merge correto no desktop sem conflito manual.
-**Estimativa:** Semanas 17–20
+## 🔵 F5 — Deploy em Produção *(futura)*
+**Objetivo:** Sair do "só roda na minha máquina" para acessível de qualquer dispositivo, de verdade — backend sempre ligado, frontend publicado, domínio próprio se quiser.
+**Critério de conclusão:** Abrir o app a partir do celular ou de outro PC, logar com Supabase Auth, e ver as mesmas notas/canvas de sempre.
+**Estimativa:** Semanas 17–18
+**Nota:** esta fase **substitui** a "F5 — Sincronização e Colaboração via CRDT" do plano original — ver DEC-011 (CRDT deixou de ser necessário para um projeto single-user online-first).
 
-- [ ] CRDT Automerge 2.0: cada Block com seu próprio documento (`crdt_state`).
-- [ ] Sync server com Hocuspocus (WebSocket + awareness).
-- [ ] Indicador de presença (quem está editando qual Block).
-- [ ] Histórico de versões via log de patches Automerge (time-travel).
-- [ ] Estratégia de merge para `canvas_nodes` (posição = Last Write Wins é aceitável).
-- [ ] Compactação periódica do `crdt_state` (GC de patches antigos).
+- [ ] Deploy do `apps/api` num host sempre ligado com tier grátis (Render ou Fly.io — escolher na implementação).
+- [ ] Deploy do `apps/web` na Vercel (ver DEC-013), com as variáveis de ambiente de produção (Supabase URL/keys, URL do `apps/api`).
+- [ ] Configurar CORS do `apps/api` para aceitar o domínio de produção da Vercel.
+- [ ] (Opcional) Domínio próprio em vez do subdomínio gratuito da Vercel.
+- [ ] (Opcional) Supabase Realtime: refletir mudanças automaticamente entre abas/dispositivos abertos ao mesmo tempo, sem precisar recarregar a página — alternativa simples ao que o CRDT resolveria de forma muito mais complexa.
 
 ---
 
@@ -111,6 +112,7 @@
 
 ## 🚫 Itens descartados desta visão
 
-- **Colaboração em tempo real estilo Figma** — fora de escopo no MVP; collab básica (presença + sync) será entregue na F5, mas cursor compartilhado em tempo real é complexidade desproporcional para uso individual. Pode voltar ao IDEAS se o projeto escalar para times.
-- **App desktop Electron/Tauri** — Web-First é suficiente com OPFS; Electron adicionaria distribuição, updates e assinatura de código. Avaliar pós-v1.0 se houver demanda.
+- **CRDT (Automerge) + sincronização offline (wa-sqlite/OPFS)** — descartado em 2026-06-26: resolvia conflito de edição concorrente offline, cenário que não existe num projeto single-user online-first. Ver DEC-011 (supera DEC-003 e DEC-004). `packages/crdt` removido do monorepo.
+- **Colaboração em tempo real estilo Figma** — fora de escopo: cursor compartilhado em tempo real é complexidade desproporcional para uso individual. Pode voltar ao IDEAS se o projeto escalar para times (não é o plano).
+- **App desktop Electron/Tauri** — o modelo online-first já cobre "acesso de qualquer máquina" via navegador; Electron adicionaria distribuição, updates e assinatura de código sem necessidade clara. Avaliar pós-v1.0 se houver demanda.
 - **CMS ou plataforma pública** — Fora de escopo. O projeto é ferramenta pessoal, não plataforma de publicação.
