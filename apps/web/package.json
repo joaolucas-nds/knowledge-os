@@ -13,6 +13,7 @@
     "clean": "rm -rf .next dist *.tsbuildinfo"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.0",
     "next": "^16.2.9",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"

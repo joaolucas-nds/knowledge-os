@@ -5,6 +5,24 @@
 
 ---
 
+## [0.3.0] — 2026-06-29
+### Adicionado
+- `apps/web`: login via Supabase Auth — página `/login`, Server Actions `signIn`/`signOut`, `lib/supabase/client.ts` e `lib/supabase/server.ts`.
+- `apps/web/proxy.ts`: renovação automática de sessão + redirecionamento de rotas protegidas (substitui o que seria `middleware.ts` — ver DEC-015).
+- `apps/web/app/auth/callback/route.ts`: troca de code por sessão (suporte futuro a magic link/OAuth).
+- `apps/api/src/auth/plugin.ts`: verificação de JWT do Supabase (HS256/Legacy Secret) via `@fastify/jwt`; decorator `requireAuth` para proteger rotas.
+- `apps/api`: rota `/me` de diagnóstico, protegida por `requireAuth` — testada via HTTP real (não só simulação).
+- `packages/db/src/client.ts`: detecção automática de SSL por host (`shouldUseSsl`) — Supabase e qualquer host remoto usam SSL automaticamente, localhost não.
+
+### Corrigido
+- FIX-002: conflito de module augmentation entre `@fastify/jwt` e tipagem própria de `request.user` — corrigido usando o ponto de extensão correto da lib (`FastifyJWT` interface).
+
+### Decidido
+- DEC-014: verificação de JWT via HS256/Legacy Secret (não JWKS); Session mode pooler (porta 5432) em vez de Transaction mode (6543), tanto para `apps/api` quanto para migrations.
+- DEC-015: `proxy.ts` desde o início (não `middleware.ts`) — Next.js 16 renomeou a convenção; descoberto no primeiro build de validação.
+
+---
+
 ## [0.2.0] — 2026-06-26
 ### Alterado
 - **Pivô arquitetural:** modelo passa de Local-First+CRDT (multi-dispositivo offline) para Online-First single-user (Postgres no Supabase como única fonte de verdade) — ver DEC-011. Decisão do usuário: uso é só por uma pessoa, sem requisito de edição offline.

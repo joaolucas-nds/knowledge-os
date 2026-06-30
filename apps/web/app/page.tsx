@@ -1,15 +1,15 @@
 /**
- * Página inicial da F0.
+ * Página inicial (/). Requer autenticação — o Middleware já redireciona
+ * para /login se o usuário não estiver logado; esta página não precisa
+ * checar novamente.
  *
- * Propositalmente simples: o objetivo desta fase não é UI, é provar que
- * apps/web e apps/api sobem juntos em dev e conseguem se comunicar.
- * Server Component fazendo fetch direto no Fastify — sem "use cache",
- * então roda a cada request (queremos status ao vivo, não em cache).
- *
- * Quando wa-sqlite/OPFS entrar (próximo passo desta F0), o "primeiro
- * Block criado e persistido localmente" vai substituir este card por
- * um formulário real de criação de nota.
+ * Por enquanto exibe: saudação com o e-mail do usuário + status da API
+ * (mesma validação de F0) + botão de logout. Será substituída pela
+ * interface real do workspace na F1 (Core de Notas).
  */
+
+import { createClient } from "@/lib/supabase/server";
+import { signOut } from "./(auth)/login/actions";
 
 interface ApiHealth {
   status: "ok";
@@ -21,7 +21,6 @@ async function fetchApiHealth(): Promise<
   { ok: true; data: ApiHealth } | { ok: false; error: string }
 > {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
-
   try {
     const response = await fetch(`${apiUrl}/health`, { cache: "no-store" });
     if (!response.ok) {
@@ -38,21 +37,36 @@ async function fetchApiHealth(): Promise<
 }
 
 export default async function HomePage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const health = await fetchApiHealth();
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 p-8">
-      <div className="max-w-xl space-y-4 text-center">
-        <h1 className="text-2xl font-semibold">Knowledge OS</h1>
-        <p className="text-sm text-neutral-400">
-          Fase 0 — Fundação Técnica. Esta página só valida que{" "}
-          <code className="rounded bg-neutral-800 px-1.5 py-0.5">apps/web</code>{" "}
-          e{" "}
-          <code className="rounded bg-neutral-800 px-1.5 py-0.5">apps/api</code>{" "}
-          conversam em dev.
-        </p>
+      {/* Cabeçalho com info do usuário e botão de logout */}
+      <div className="w-full max-w-xl flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-neutral-100">
+            Knowledge OS
+          </h1>
+          {user?.email && (
+            <p className="text-xs text-neutral-500 mt-0.5">{user.email}</p>
+          )}
+        </div>
+        <form action={signOut}>
+          <button
+            type="submit"
+            className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors px-2 py-1 rounded border border-transparent hover:border-neutral-700"
+          >
+            Sair
+          </button>
+        </form>
       </div>
 
+      {/* Status da API (validação F0 — substituir na F1) */}
       <div
         className={`w-full max-w-xl rounded-lg border p-4 text-left text-sm ${
           health.ok
@@ -71,24 +85,16 @@ export default async function HomePage() {
           </>
         ) : (
           <>
-            <p className="font-medium text-amber-300">
-              ⚠ apps/api não respondeu
-            </p>
+            <p className="font-medium text-amber-300">⚠ apps/api não respondeu</p>
             <p className="mt-1 text-xs text-neutral-400">{health.error}</p>
-            <p className="mt-2 text-xs text-neutral-500">
-              Rode{" "}
-              <code className="rounded bg-neutral-800 px-1 py-0.5">
-                pnpm --filter @knowledge-os/api dev
-              </code>{" "}
-              em outro terminal (ou{" "}
-              <code className="rounded bg-neutral-800 px-1 py-0.5">
-                pnpm dev
-              </code>{" "}
-              na raiz para subir tudo via turbo).
-            </p>
           </>
         )}
       </div>
+
+      <p className="text-xs text-neutral-600 max-w-xl text-center">
+        F0 concluída — autenticação funcionando. A interface real do workspace
+        (editor de notas, canvas, tabelas) vem na F1.
+      </p>
     </main>
   );
 }

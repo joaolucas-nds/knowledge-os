@@ -20,7 +20,7 @@ Ferramenta própria de gestão do conhecimento e organização visual de ideias,
 - **Framework:** Next.js 16 (App Router, Turbopack) — *atualizado de "15" nesta sessão de implementação, ver DEC-009*
 - **Canvas:** tldraw v3 (motor de renderização, shapes customizados)
 - **Editor de texto:** Tiptap v2 + ProseMirror
-- **Auth:** Supabase Auth (`supabase-js`) — login single-user, sem tela pública de cadastro (DEC-012)
+- **Auth:** Supabase Auth via `@supabase/ssr` — login single-user, sem tela pública de cadastro (DEC-012); backend verifica JWT HS256/Legacy Secret via `@fastify/jwt` (DEC-014)
 - **Busca client-side:** Orama 3.x (índice invertido + vetor embutido) — agora um *enhancement* de performance, não um requisito de funcionamento offline (ver DEC-011)
 - **Estado global:** Zustand + TanStack Query
 - **UI base:** Radix UI + Tailwind CSS v4
@@ -135,6 +135,12 @@ Conexões visuais são uma camada SVG absoluta sobre o canvas, calculando paths 
 7. **Não assumir que toda a stack usa a mesma versão do ESLint** — `apps/web` depende de `eslint-config-next`, cujos plugins transitivos (`eslint-plugin-react`, `eslint-plugin-jsx-a11y`, `eslint-plugin-import`) hoje só suportam ESLint até `^9`. Forçar ESLint 10 ali quebra a instalação (`pnpm peers check` mostra o conflito). Ver DEC-010: `apps/web` fica em `^9`, os demais workspaces (sem essa dependência) usam `^10` livremente.
 
 8. **Free tier do Supabase pausa o projeto após 7 dias de inatividade** — se você ficar uma semana sem abrir o app, a primeira requisição depois disso pode demorar (cold start) ou falhar até o projeto "despausar" no painel do Supabase. Não é bug do projeto — é característica do plano gratuito (ver DEC-012).
+
+9. **O arquivo de proteção de rotas do Next.js se chama `proxy.ts`, não `middleware.ts`** — Next.js 16 renomeou a convenção (o nome antigo confundia com middleware estilo Express). `middleware.ts` ainda funciona mas está depreciado e some numa versão futura. Ver DEC-015. Ao consultar exemplos/tutoriais externos (a maioria ainda usa o nome antigo), traduzir mentalmente `middleware()`/`middleware.ts` → `proxy()`/`proxy.ts`.
+
+10. **Nunca usar o Transaction pooler do Supabase (porta 6543) com Drizzle/`pg`** — não suporta prepared statements, causa erros intermitentes do tipo "prepared statement already exists" sob concorrência. Este projeto usa Session mode (porta 5432, host `*.pooler.supabase.com`) em todo lugar — `packages/db` e `apps/api` compartilham a mesma `DATABASE_URL`. Ver DEC-014.
+
+11. **Ao tipar `request.user` com `@fastify/jwt`, estender `FastifyJWT`, nunca `FastifyRequest` diretamente** — a lib já declara `user` em `FastifyRequest` internamente; redeclarar por cima gera conflito de tipos (`TS2687`/`TS2717`), não um merge. O padrão correto é `declare module "@fastify/jwt" { interface FastifyJWT { user: SeuTipo } }`. Ver FIX-002.
 
 ---
 

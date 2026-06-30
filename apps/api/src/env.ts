@@ -16,6 +16,12 @@ export interface ApiEnv {
   rateLimitWindowMs: number;
   /** Ausente = API sobe sem banco (útil para health check isolado em F0). */
   databaseUrl: string | undefined;
+  /**
+   * Segredo JWT do projeto Supabase (Settings → API → JWT Settings).
+   * Usado para verificar o token de acesso enviado pelo frontend.
+   * Ausente = rotas protegidas retornam 503 "auth_not_configured".
+   */
+  supabaseJwtSecret: string | undefined;
 }
 
 function parseIntEnv(value: string | undefined, fallback: number): number {
@@ -34,5 +40,6 @@ export function loadEnv(env: NodeJS.ProcessEnv = process.env): ApiEnv {
     rateLimitMax: parseIntEnv(env.RATE_LIMIT_MAX, 100),
     rateLimitWindowMs: parseIntEnv(env.RATE_LIMIT_WINDOW_MS, 60_000),
     databaseUrl: env.DATABASE_URL,
+    supabaseJwtSecret: env.SUPABASE_JWT_SECRET,
   };
 }

@@ -13,6 +13,7 @@ import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import type { Database } from "@knowledge-os/db";
 import type { ApiEnv } from "./env.js";
+import authPlugin from "./auth/plugin.js";
 
 export interface BuildAppOptions {
   env: ApiEnv;
@@ -34,6 +35,10 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     global: true,
     max: options.env.rateLimitMax,
     timeWindow: options.env.rateLimitWindowMs,
+  });
+
+  await app.register(authPlugin, {
+    supabaseJwtSecret: options.env.supabaseJwtSecret,
   });
 
   app.get("/health", async () => {
@@ -66,6 +71,19 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
       });
     }
   });
+
+  /**
+   * Rota protegida de referência/diagnóstico — confirma que o token enviado
+   * pelo frontend é validado corretamente. Primeira rota real (F1+) deve
+   * seguir o mesmo padrão: `preHandler: app.requireAuth` + ler `request.user.sub`.
+   */
+  app.get(
+    "/me",
+    { preHandler: app.requireAuth },
+    async (request) => {
+      return { userId: request.user.sub, email: request.user.email };
+    },
+  );
 
   return app;
 }

@@ -272,3 +272,50 @@ Usar **Vercel** para o deploy do `apps/web`.
 
 ### Consequências
 Nenhuma mudança de código necessária — o `apps/web` já está estruturado de forma compatível com deploy direto na Vercel (basta conectar o repositório). Cloudflare ainda entra no projeto, mas só como Storage (R2), se vier a substituir o Supabase Storage — papel bem mais simples que hospedar o app inteiro.
+
+---
+
+## DEC-014 — Verificação de JWT via HS256 (Legacy Secret) + Session pooler (porta 5432) em vez de Transaction pooler
+**Data:** 2026-06-29 · **Status:** aceita
+
+### Contexto
+Implementar de fato a integração com Supabase (DEC-012) exigiu duas escolhas técnicas que a decisão original não detalhava: (1) como o `apps/api` verifica o JWT emitido pelo Supabase Auth — há duas famílias de algoritmo possíveis (HS256 simétrico vs. ES256/RS256 assimétrico via JWKS); (2) qual porta/modo do pooler do Supabase usar na `DATABASE_URL` — o painel oferece "Transaction" (6543) e "Session" (5432), com características bem diferentes.
+
+### Decisão
+- **JWT:** verificação via **HS256 com o "Legacy JWT Secret"** do projeto (Project Settings → API → JWT Settings), usando `@fastify/jwt` configurado com esse secret simétrico. Implementado em `apps/api/src/auth/plugin.ts`.
+- **Conexão com o banco:** **Session mode pooler** (porta 5432, host `*.pooler.supabase.com`) para `packages/db` (migrations) **e** para `apps/api` (aplicação) — a mesma `DATABASE_URL` nos dois `.env`, em vez de portas diferentes para cada uso.
+
+### Alternativas consideradas
+- **JWKS + chaves assimétricas (ES256/RS256)** — é o caminho que o próprio Supabase está empurrando como padrão novo (chaves `publishable`/`secret` substituindo `anon`/`service_role`). Rejeitada por ora: exigiria buscar e cachear a chave pública via endpoint JWKS (mais uma dependência — `jose` ou similar — e mais uma peça de infraestrutura: cache com TTL, rotação de chave). Para um projeto single-user, o ganho de segurança do par assimétrico não compensa a complexidade extra. **Documentado como ponto de revisão**: se o Supabase vier a descontinuar de fato o Legacy JWT Secret (hoje é opt-in, coexiste com as chaves novas), esta decisão precisa ser revisitada.
+- **Transaction pooler (6543) para `apps/api`, Session/direta (5432) só para migrations** — era o plano original da DEC-012. Rejeitada após pesquisa: o modo Transaction não suporta prepared statements, o que é uma classe inteira de bugs (erros tipo "prepared statement already exists" sob concorrência) que simplesmente não existe no modo Session. Como o uso é single-user (baixíssima concorrência real), a vantagem do Transaction mode — multiplexar milhares de conexões — não se aplica aqui. Usar Session mode em todo lugar elimina a categoria de bug por completo, ao custo de um pooling levemente menos agressivo (irrelevante neste volume de uso).
+- **Conexão direta (`db.[projeto].supabase.co:5432`) em vez do pooler** — rejeitada: é só IPv6 por padrão (sem o add-on pago de IPv4), o que falha silenciosamente em redes/hosts que não suportam IPv6 de saída (problema documentado inclusive em hosts populares de deploy). O pooler em modo Session já resolve isso (IPv4-compatível) sem abrir mão de nenhuma feature do Postgres.
+
+### Consequências
+`apps/api/.env.example` e `packages/db/.env.example` usam a mesma connection string (porta 5432, host do pooler) — simplifica o SETUP.md (uma única string para o usuário copiar, colar nos dois lugares). `client.ts` (`packages/db`) ganhou detecção automática de SSL (`shouldUseSsl()`): habilita `ssl: true` para qualquer host que não seja `localhost`/`127.0.0.1`, sem precisar de `rejectUnauthorized: false` (o pooler do Supabase tem certificado válido — desabilitar a verificação seria abrir mão de segurança sem necessidade real). Ponto de atenção F1+: se o app crescer para múltiplos usuários reais (fora do escopo atual, ver DEC-011), revisitar tanto o pooler (Session mode não escala para alta concorrência) quanto o JWT (migrar para JWKS).
+
+---
+
+## DEC-015 — `middleware.ts` nasce como `proxy.ts` (convenção Next.js 16)
+**Data:** 2026-06-29 · **Status:** aceita
+
+### Contexto
+Ao implementar o arquivo de middleware do Next.js (renovação de sessão Supabase + redirecionamento de rotas protegidas), o primeiro build de validação acusou: *"The middleware file convention is deprecated. Please use proxy instead."* Pesquisa confirmou: o Next.js renomeou oficialmente a convenção `middleware.ts` → `proxy.ts` (e a função exportada `middleware` → `proxy`) a partir da série 16.1/16.2 — o nome antigo "confundia com middleware estilo Express" segundo a justificativa oficial do time do Next.js. `middleware.ts` ainda funciona na versão atual (16.2.9, testado), mas está marcado para remoção numa versão futura.
+
+### Decisão
+Usar `proxy.ts` (com `export async function proxy(...)`) desde a primeira versão deste arquivo no projeto — nunca chegou a existir um `middleware.ts` "antigo" para migrar, então não há custo de transição, só a escolha de não nascer usando algo já depreciado.
+
+### Alternativas consideradas
+- **Usar `middleware.ts` "porque ainda funciona"** — rejeitada: criar um arquivo novo já em cima de uma convenção marcada para remoção é dívida técnica desnecessária no dia em que o arquivo nasce, pelo mesmo raciocínio da DEC-009 (Next.js 15→16).
+
+### Consequências
+Nenhuma — é puramente uma escolha de nome de arquivo/função, o comportamento é idêntico ao que seria com `middleware.ts`. Vale lembrar: documentação de terceiros (Stack Overflow, tutoriais, a própria documentação de bibliotecas como `@supabase/ssr`) majoritariamente ainda referencia `middleware.ts` por enquanto — ao consultar exemplos externos no futuro, mentalmente traduzir `middleware()`/`middleware.ts` para `proxy()`/`proxy.ts`.
+
+---
+
+## FIX-002 — Module augmentation conflitante entre `@fastify/jwt` e a tipagem própria de `request.user`
+**Data:** 2026-06-29
+
+- **Sintoma:** `pnpm typecheck` no `apps/api` falhava com `TS2687: All declarations of 'user' must have identical modifiers` e `TS2717: Subsequent property declarations must have the same type`, apontando para a declaração de `request.user` em `auth/plugin.ts`.
+- **Causa raiz:** `@fastify/jwt` já declara seu próprio campo `user` em `FastifyRequest` (tipado como `string | object | Buffer`) via module augmentation interna. O código tentou redeclarar `FastifyRequest.user` com um tipo próprio (`SupabaseJwtPayload | undefined`) num segundo bloco `declare module "fastify"` — TypeScript não permite duas declarações incompatíveis do mesmo campo na mesma interface.
+- **Solução:** usar o ponto de extensão que a própria lib expõe para isso — `declare module "@fastify/jwt" { interface FastifyJWT { payload: ...; user: ... } }` — em vez de tentar redeclarar `FastifyRequest` diretamente. Esse é o padrão documentado pelo `@fastify/jwt` especificamente para tipar `request.user`. Como bônus, ficou mais simples: `request.jwtVerify()` já popula `request.user` automaticamente (a atribuição manual que o código fazia antes era redundante e foi removida).
+- **Lição:** ao tipar uma extensão de uma lib de terceiros via module augmentation, primeiro checar se a lib já reserva aquele campo com seu próprio mecanismo de extensão — tentar declarar por cima de algo que a lib já declara gera conflito de tipos, não um merge. Pego pelo `pnpm typecheck` antes de chegar a rodar — exatamente o tipo de erro que a validação de tipo existe para capturar cedo.

@@ -16,8 +16,8 @@
 - [x] Schema Drizzle inicial: tabelas `blocks` e `relations` — migration gerada e aplicada contra Postgres real (local, para validação).
 - [x] API REST base com Fastify (health check, CORS, rate limit).
 - [x] Criar conta e projeto no Supabase (banco + Auth + Storage) — guia em SETUP.md.
-- [ ] Apontar `DATABASE_URL` para o Postgres do Supabase (ajuste de SSL no `client.ts`) e reaplicar a migration lá.
-- [ ] Implementar login single-user com Supabase Auth (`supabase-js` no `apps/web` + verificação de JWT no `apps/api`) — ver DEC-012.
+- [x] Ajuste de SSL automático no `client.ts` (`shouldUseSsl`) — pronto para apontar a `DATABASE_URL` para o Supabase assim que o projeto existir; reaplicar a migration lá fica pendente até então.
+- [x] Login single-user com Supabase Auth implementado e validado (`@supabase/ssr` no `apps/web`, `@fastify/jwt` no `apps/api` — ver DEC-012/DEC-014). Falta só testar contra um projeto Supabase real (ver STATUS.md).
 - [x] CI básico no GitHub Actions (typecheck + lint) — criado, ainda não exercitado por um push real.
 
 ---

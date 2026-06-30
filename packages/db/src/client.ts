@@ -28,6 +28,32 @@ export interface DbHandle {
 }
 
 /**
+ * Decide se a conexão precisa de SSL com base no host da connection string.
+ *
+ * Supabase (e a maioria dos provedores hospedados) exige SSL e tem um
+ * certificado válido no pooler — `rejectUnauthorized: true` (o padrão do
+ * Node) funciona sem configuração extra (confirmado: discussões da
+ * comunidade Supabase desaconselham `rejectUnauthorized: false` em
+ * produção, pois desabilita a verificação do certificado). Localhost
+ * (desenvolvimento com Postgres local) não usa SSL.
+ *
+ * Detecção automática evita que cada chamador de `createDb` precise
+ * lembrar de passar `poolConfig.ssl` manualmente — e ainda assim
+ * `poolConfig` continua disponível para sobrescrever este comportamento
+ * se um ambiente específico precisar (ex.: CA customizado via `ssl.ca`).
+ */
+function shouldUseSsl(connectionString: string): boolean {
+  try {
+    const { hostname } = new URL(connectionString);
+    return hostname !== "localhost" && hostname !== "127.0.0.1";
+  } catch {
+    // Connection string malformada — deixa o erro real aparecer na
+    // tentativa de conexão do pg, em vez de mascarar aqui.
+    return false;
+  }
+}
+
+/**
  * Cria uma instância de banco com seu próprio Pool de conexões.
  *
  * Armadilha conhecida (ver INSTRUCTION_GUIDE/HISTORICO de boas práticas
@@ -37,6 +63,7 @@ export interface DbHandle {
 export function createDb(options: CreateDbOptions): DbHandle {
   const pool = new Pool({
     connectionString: options.connectionString,
+    ssl: shouldUseSsl(options.connectionString) ? true : undefined,
     ...options.poolConfig,
   });
 
