@@ -319,3 +319,31 @@ Nenhuma — é puramente uma escolha de nome de arquivo/função, o comportament
 - **Causa raiz:** `@fastify/jwt` já declara seu próprio campo `user` em `FastifyRequest` (tipado como `string | object | Buffer`) via module augmentation interna. O código tentou redeclarar `FastifyRequest.user` com um tipo próprio (`SupabaseJwtPayload | undefined`) num segundo bloco `declare module "fastify"` — TypeScript não permite duas declarações incompatíveis do mesmo campo na mesma interface.
 - **Solução:** usar o ponto de extensão que a própria lib expõe para isso — `declare module "@fastify/jwt" { interface FastifyJWT { payload: ...; user: ... } }` — em vez de tentar redeclarar `FastifyRequest` diretamente. Esse é o padrão documentado pelo `@fastify/jwt` especificamente para tipar `request.user`. Como bônus, ficou mais simples: `request.jwtVerify()` já popula `request.user` automaticamente (a atribuição manual que o código fazia antes era redundante e foi removida).
 - **Lição:** ao tipar uma extensão de uma lib de terceiros via module augmentation, primeiro checar se a lib já reserva aquele campo com seu próprio mecanismo de extensão — tentar declarar por cima de algo que a lib já declara gera conflito de tipos, não um merge. Pego pelo `pnpm typecheck` antes de chegar a rodar — exatamente o tipo de erro que a validação de tipo existe para capturar cedo.
+
+---
+
+## FIX-003 — `drizzle-kit migrate` (CLI) engole o erro real e sai com "Exit status 1" sem mensagem
+**Data:** 2026-06-30
+
+- **Sintoma:** `pnpm --filter @knowledge-os/db db:migrate` falhava com `[ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] ... drizzle-kit migrate Exit status 1`, sem nenhuma linha explicando o motivo — nem erro de SQL, nem de conexão, nem de autenticação. Só "Using 'pg' driver for database querying" seguido do spinner e do código de saída.
+- **Causa raiz:** bug conhecido e não corrigido nas versões estáveis 0.x do `drizzle-kit`/`drizzle-orm` — quando a `migrate()` interna falha por qualquer motivo, a view de progresso da CLI (`TaskTerminal`/`MigrateProgress`) trata o evento de rejeição (`"rejected"`) da mesma forma que `"pending"` (só spinner), sem nunca imprimir o `err` recebido. Confirmado no rastreador oficial do Drizzle (issues #5521, #5601, #5816, #5520 do repositório `drizzle-team/drizzle-orm`) — corrigido só na linha beta `1.0.0-beta.22`, nunca retroportado para `0.x`. **Reproduzido nesta sessão** com as versões exatas deste projeto (`drizzle-kit@0.31.10` + `drizzle-orm@0.45.2`, que são citadas literalmente como afetadas na issue #5816): uma migration com SQL inválido produziu exatamente "Exit status 1" e nenhuma outra linha.
+- **Solução:** `db:migrate` deixou de chamar a CLI (`drizzle-kit migrate`) e passou a rodar `packages/db/src/migrate.ts`, um script pequeno que usa a API programática (`migrate()` de `drizzle-orm/node-postgres/migrator`, documentada pelo próprio Drizzle como caminho alternativo) e captura o erro num `try/catch` que o imprime explicitamente. Rodando o mesmo cenário de SQL inválido através deste script, o erro real aparece completo (`error: relation "tabela_inexistente" does not exist`, código `42P01`, etc.) — testado também com senha errada (`password authentication failed for user "postgres"`, código `28P01`) e com `DATABASE_URL` ausente (mensagem própria, sem tentar conectar). `db:generate` e `db:studio` continuam na CLI normalmente — o bug é específico do comando `migrate` (o único que fala com o banco de verdade); os outros dois só leem/exibem schema.
+- **Lição:** "exit code 1 sem mensagem" não é evidência de que a config/credenciais estão erradas — pode ser a própria ferramenta escondendo a evidência. Antes de instruir o usuário a revisar `.env`/senha às cegas, vale confirmar se a ferramenta em si tem esse tipo de falha conhecida (busca rápida no rastreador de issues do pacote, pela versão exata usada) — economiza ciclos de tentativa-e-erro no lado errado do problema.
+
+---
+
+## DEC-016 — `packages/crdt` precisa ser DELETADO do disco, não só omitido de um zip novo
+**Data:** 2026-06-30 · **Status:** aceita
+
+### Contexto
+A CI (`pnpm install --frozen-lockfile`) passou a falhar com `[ERR_PNPM_OUTDATED_LOCKFILE]`, apontando `packages/crdt/package.json` como a causa — mesmo essa remoção já estando registrada como concluída desde a DEC-011/sessão 2026-06-26. Investigação (via o mount do Projeto, que reflete o repositório real do usuário) confirmou que a pasta `packages/crdt/` **continua existindo no disco do usuário** — com `package.json`, `tsconfig.json`, `eslint.config.mjs` e `src/index.ts` intactos — apesar de o assistente ter removido essa pasta no *sandbox* de validação e entregado um zip sem ela na sessão de 2026-06-26.
+
+### Decisão
+Tratar "entregar um zip sem o arquivo X" como **insuficiente** para comunicar uma remoção — extrair um zip por cima de uma pasta existente **adiciona e sobrescreve, nunca deleta** o que já está no disco e não está no zip novo. Daqui em diante, toda entrega que remove um arquivo ou pasta inclui uma instrução explícita de exclusão (comando `rmdir`/`del` do CMD, ou passo textual claro) — não basta a ausência no pacote entregue.
+
+### Alternativas consideradas
+- **Confiar que o usuário percebe a ausência e deleta por conta** — rejeitada: é exatamente o que não aconteceu aqui; a ausência de um arquivo é fácil de não notar ao extrair um zip grande por cima de uma pasta já existente, e o custo de errar (CI quebrada, tempo perdido) é maior que o custo de uma instrução explícita.
+- **Nunca mais entregar como zip, só instruções cirúrgicas de diff** — rejeitada por ora: zip continua sendo o formato certo para bootstrap/greenfield e para trocas grandes de arquivos (ver CEREBRO.md — ASU é para patches em código já existente, não para reestruturação de árvore inteira); o problema não é o formato zip, é a ausência de instrução de exclusão junto dele.
+
+### Consequências
+Esta sessão inclui instrução explícita de exclusão da pasta `packages\crdt` no bloco de comandos entregue ao usuário. Fica registrado como checklist para toda entrega futura que remova algo: "removi X do zip" deve sempre vir acompanhado de "e rode `rmdir /s /q caminho\X`" (ou equivalente) — nunca só a ausência silenciosa.

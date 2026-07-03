@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --max-warnings=0",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "tsx src/migrate.ts",
     "db:studio": "drizzle-kit studio",
     "clean": "rm -rf dist *.tsbuildinfo"
   },
@@ -23,6 +23,7 @@
   "devDependencies": {
     "@types/pg": "^8.20.0",
     "drizzle-kit": "^0.31.10",
+    "tsx": "^4.22.4",
     "typescript": "^6.0.3"
   }
 }

@@ -142,6 +142,10 @@ Conexões visuais são uma camada SVG absoluta sobre o canvas, calculando paths 
 
 11. **Ao tipar `request.user` com `@fastify/jwt`, estender `FastifyJWT`, nunca `FastifyRequest` diretamente** — a lib já declara `user` em `FastifyRequest` internamente; redeclarar por cima gera conflito de tipos (`TS2687`/`TS2717`), não um merge. O padrão correto é `declare module "@fastify/jwt" { interface FastifyJWT { user: SeuTipo } }`. Ver FIX-002.
 
+12. **`drizzle-kit migrate` (a CLI) esconde o erro real em caso de falha** — bug conhecido, não corrigido nas versões estáveis 0.x (`drizzle-kit@0.31.10`/`drizzle-orm@0.45.2`, as deste projeto). Qualquer falha (SQL inválido, senha errada, host inalcançável) sai só como "Exit status 1", sem nenhuma mensagem. Por isso `db:migrate` roda `packages/db/src/migrate.ts` (API programática `migrate()`, com `try/catch` que imprime o erro real) em vez da CLI. `db:generate` e `db:studio` continuam na CLI normalmente — só `migrate` tem esse problema. Ver FIX-003.
+
+13. **Remoção de arquivo/pasta comunicada só pela ausência num zip não é suficiente** — extrair um zip por cima de uma pasta existente adiciona/sobrescreve, nunca deleta o que já está no disco e não está no zip novo. Toda entrega que remove algo precisa vir com uma instrução explícita de exclusão (comando de terminal), não só a ausência silenciosa no pacote. Foi assim que `packages/crdt` (removido "no papel" na sessão de 2026-06-26) continuou existindo de fato no repositório do usuário e quebrou o CI. Ver DEC-016.
+
 ---
 
 ## Contexto de Produto

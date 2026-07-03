@@ -5,6 +5,19 @@
 
 ---
 
+## [0.3.1] — 2026-06-30
+### Corrigido
+- FIX-003: `drizzle-kit migrate` (CLI) engolia o erro real em caso de falha, saindo só com "Exit status 1" — bug conhecido e confirmado nas versões deste projeto (drizzle-kit 0.31.10 + drizzle-orm 0.45.2). `db:migrate` passou a rodar `packages/db/src/migrate.ts`, script próprio via API programática do Drizzle, que expõe o erro real.
+- CI (GitHub Actions) falhando em `pnpm install --frozen-lockfile`: causa raiz era `packages/crdt/` — removido "no papel" na sessão de 2026-06-26 (ausente do zip entregue), mas nunca de fato deletado do disco do usuário, então o `pnpm-workspace.yaml` (glob `packages/*`) continuava reconhecendo-o. Pasta deletada de verdade; `pnpm-lock.yaml` regenerado.
+
+### Removido
+- `packages/crdt` — desta vez removido de fato (a remoção da sessão de 2026-06-26 nunca tinha sido aplicada ao disco real, só ao zip entregue).
+
+### Decidido
+- DEC-016: remoção de arquivo/pasta via zip precisa vir acompanhada de instrução explícita de exclusão — a ausência no pacote entregue não é suficiente (extração não deleta).
+
+---
+
 ## [0.3.0] — 2026-06-29
 ### Adicionado
 - `apps/web`: login via Supabase Auth — página `/login`, Server Actions `signIn`/`signOut`, `lib/supabase/client.ts` e `lib/supabase/server.ts`.
