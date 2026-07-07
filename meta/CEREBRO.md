@@ -215,13 +215,25 @@ O usuário trabalha em **Windows (CMD/Prompt de Comando)**. Qualquer comando de 
 
 Respostas em pt-BR, incluindo comentários quando houver código.
 
+## Recomendação de configuração (fim de sessão)
+
+No fim de cada sessão, junto do resumo e de qualquer dúvida, avalie o que a **próxima etapa** exige e recomende a configuração de forma **completa e explícita**. Os controles dependem de ONDE se trabalha:
+- **No chat (claude.ai):** **modelo** (recomende pela capacidade — o mais capaz vs. um mais leve —, não pelo nome/versão, que muda), **esforço** (Baixo→Máximo) e **pensamento** (ligado/desligado): três controles independentes.
+- **No Claude Code (CLI/desktop):** **modelo** + **nível de esforço** (`/effort` baixo→máximo, ou `xhigh`/`ultracode` onde houver). **Não há toggle de pensamento** no Code — ele é acoplado ao esforço; para um turno difícil pontual, use `ultrathink` no prompt. Nunca recomende "ligar o pensamento" no Code.
+- **Nunca afirme saber a configuração atual** — ela não é legível de forma confiável. Recomende pela TAREFA e pela config que o usuário declarou.
+- Próxima etapa **pesada** + config provável fraca → **pare e peça o aumento, nomeando os níveis exatos**.
+- Etapa atual **leve** mas config **alta** → **não pare no meio**; termine e, no fim, sinalize "pode baixar para X na próxima".
+- É um **default recomendado**, não proibição — cabe sob a válvula de desvio registrado.
+
 ## Saída de código via ASU (patch)
 
-Este projeto entrega mudanças de código como instrução do **Atualizador Automático de Scripts (ASU)** — não arquivos inteiros. Pré-requisito: o `INSTRUCTION_GUIDE.md` está no conhecimento do Projeto e a ferramenta ASU está instalada.
+Este projeto usa o **Atualizador Automático de Scripts (ASU)** para **alterar arquivos existentes** — entregue UMA instrução `yaml` (patch cirúrgico) **para baixar**, não arquivos inteiros. Para **arquivos NOVOS**, entregue o arquivo **pronto para baixar** (não embuta o arquivo inteiro num bloco YAML — arrisca corromper no escape), **exceto** quando a criação faz parte de uma instrução que também edita existentes (operação atômica) — aí use `create_file` na mesma instrução. Pré-requisito: `INSTRUCTION_GUIDE.md` e `PROMPT_IA.md` estão no conhecimento do Projeto e o ASU está instalado.
 
-1. Ao pedir uma "instrução ASU" (ou ao alterar arquivos existentes), responda com **UM bloco `yaml`** cujo `format_version` é o declarado no `INSTRUCTION_GUIDE.md` do Projeto (não fixe um número aqui — o guia é o contrato) e uma linha final com `python -m src apply instrucao.yaml --root <RAIZ> --dry-run`. Nunca XML; nunca arquivos soltos.
-2. Prefira edições **cirúrgicas** (`replace_function`/`replace_method`/`replace_section`/`set_json_path`); para JS e outras linguagens, `type: "text"` + `replace_context_block` com âncoras copiadas **literalmente do arquivo real** (indentação exata), casando **uma única vez** — só o miolo no `new_content`.
-3. Não invente campos nem use número de linha; o `INSTRUCTION_GUIDE.md` é a referência obrigatória do formato.
-4. **Verificação (sessão seguinte):** se você emitiu uma instrução ASU e os arquivos do projeto estão à vista, confira no disco cada arquivo que ela tocou antes de seguir — não confie em "deu certo".
+1. Ao pedir uma "instrução ASU" (ou ao **editar** arquivos existentes), entregue a instrução **como arquivo `.yaml` para baixar** — não colada no chat: o download preserva os bytes UTF-8 exatos e evita corromper âncoras não-ASCII no copia-e-cola. Nome `AAMMDD-asuNNNN.yaml` (ex.: `260628-asu0001.yaml`), com `format_version` igual ao declarado no `INSTRUCTION_GUIDE.md` (não fixe número — o guia é o contrato). Acompanhe de UMA linha: `python -m src apply <arquivo>.yaml --root <RAIZ> --dry-run`. Nunca XML.
+2. **Arquivo NOVO:** entregue-o pronto para baixar — não o reescreva como instrução ASU. Exceção: criação junto de edições a existentes na MESMA instrução → aí `create_file`. (Mesmo numa edição, o usuário pode preferir o arquivo inteiro para baixar — se pedir, respeite.)
+3. **Escopo do ASU (por tipo de arquivo):** (a) **código** e docs de **heading estável** (`DECISIONS.md`, `CONTEXT.md`, `GLOSSARY`) → ASU serve (append/troca localizada, âncora inequívoca). (b) **Capítulos / escrita longa:** edição de **trecho localizado** → ASU é até preferível (evita reescrever o capítulo todo e o risco de perder conteúdo no meio); **escrita nova ou reescrita profunda** → arquivo inteiro (não há âncora; é geração). (c) **Docs rolantes** (`STATUS`, `CHANGELOG`, `IDEAS`, `HISTORICO` e equivalentes de domínio que acumulam por higiene, ex.: `REVISOES`) → **sempre inteiros**: a edição é holística (mover o resolvido, reclassificar, fundir, checar que nada único se perdeu) e um patch cirúrgico briga com a higiene; pior, o diff pode 'bater' e a higiene estar errada, porque o ASU não tem julgamento. Reavalie `DECISIONS.md` via ASU só perto de ~700 linhas. **Verificação obrigatória:** apliquei uma instrução ASU e os arquivos estão à vista? Confira no disco cada arquivo tocado antes de seguir, mesmo sem o usuário pedir — não confie em 'deu certo' (alinhado ao ponto 9 do PROMPT_IA do ASU).
+4. Prefira edições **cirúrgicas** (`replace_function`/`replace_method`/`replace_section`/`set_json_path`); para JS e outras, `type: "text"` + `replace_context_block` com âncoras copiadas **literalmente** do arquivo real (indentação exata), casando **uma única vez** — só o miolo no `new_content`. Se a âncora tiver caractere não-ASCII, evite o literal com `.*`: prefira uma âncora ASCII vizinha estável.
+5. Não invente campos nem use número de linha; o `INSTRUCTION_GUIDE.md` é a referência obrigatória do formato.
+6. **Verificação (sessão seguinte):** se emitiu uma instrução ASU e os arquivos estão à vista, confira no disco cada arquivo tocado antes de seguir — não confie em "deu certo".
 
 *Gerado pelo Kit de Contexto Universal — nicho Desenvolvimento. Edite à vontade: este arquivo é seu.*

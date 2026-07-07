@@ -5,6 +5,19 @@
 
 ---
 
+## [0.3.2] — 2026-07-03
+### Adicionado
+- `CEREBRO.md`: seção "Recomendação de configuração (fim de sessão)" — orienta recomendar modelo/esforço/pensamento (chat) ou modelo/effort (Claude Code) ao fechar cada sessão.
+
+### Alterado
+- `CEREBRO.md`: seção "Saída de código via ASU (patch)" reformulada — lógica por categoria de arquivo (código/heading estável, capítulos, docs rolantes) substitui o limiar de tamanho ad hoc; ASU passa a ser entregue como arquivo `.yaml` para baixar, nunca colado no chat.
+- Instruções do Projeto: releitura do mount em todo sinal de upload; registro de «Feedback para o ASU»; convenções de nome de download, `.gitignore` e `README.md`.
+
+### Decidido
+- DEC-017: adoção da atualização do Kit de Contexto Universal (CEREBRO.md + Instruções do Projeto).
+
+---
+
 ## [0.3.1] — 2026-06-30
 ### Corrigido
 - FIX-003: `drizzle-kit migrate` (CLI) engolia o erro real em caso de falha, saindo só com "Exit status 1" — bug conhecido e confirmado nas versões deste projeto (drizzle-kit 0.31.10 + drizzle-orm 0.45.2). `db:migrate` passou a rodar `packages/db/src/migrate.ts`, script próprio via API programática do Drizzle, que expõe o erro real.

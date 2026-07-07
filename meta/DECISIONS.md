@@ -347,3 +347,26 @@ Tratar "entregar um zip sem o arquivo X" como **insuficiente** para comunicar um
 
 ### Consequências
 Esta sessão inclui instrução explícita de exclusão da pasta `packages\crdt` no bloco de comandos entregue ao usuário. Fica registrado como checklist para toda entrega futura que remova algo: "removi X do zip" deve sempre vir acompanhado de "e rode `rmdir /s /q caminho\X`" (ou equivalente) — nunca só a ausência silenciosa.
+
+---
+
+## DEC-017 — Adoção da atualização do Kit de Contexto (CEREBRO.md + Instruções do Projeto)
+**Data:** 2026-07-03 · **Status:** aceita
+
+### Contexto
+O usuário trouxe uma atualização do Kit de Contexto Universal (arquivos `*__template-update.md` e `instrucoes-dev__template-update.txt`) para esta conversa, pedindo análise, comparação e adaptação ao projeto. Comparação linha a linha confirmou que oito dos nove templates (CONTEXT/STATUS/DECISIONS/CHANGELOG/IDEAS/GLOSSARY/HISTORY/LOG-TEMPLATE/ROADMAP) têm estrutura idêntica à já usada neste projeto — nenhuma mudança necessária ali. O `CEREBRO__template-update.md` e o `instrucoes-dev__template-update.txt`, porém, trazem duas adições reais de comportamento.
+
+### Decisão
+Incorporar ao `CEREBRO.md` e às Instruções do Projeto deste projeto:
+1. **Nova seção "Recomendação de configuração (fim de sessão)"** — ao fechar cada sessão, recomendar explicitamente modelo/esforço/pensamento (chat) ou modelo/effort (Claude Code) para a próxima etapa, sem nunca afirmar conhecer a config atual.
+2. **Seção ASU (patch) reformulada** — de 4 regras genéricas para uma lógica por categoria de arquivo: (a) código e docs de heading estável → ASU serve; (b) capítulos/escrita longa → ASU para edição localizada, arquivo inteiro para escrita nova/reescrita profunda; (c) docs rolantes (STATUS/CHANGELOG/IDEAS/HISTORICO) → **sempre** arquivo inteiro, nunca ASU (a edição é holística — mover, reclassificar, checar perda — e um patch cirúrgico briga com essa higiene). Também formaliza entrega do ASU como arquivo `.yaml` para baixar (não colado no chat, para preservar bytes UTF-8 e âncoras não-ASCII) com nome padronizado `AAMMDD-asuNNNN.yaml`.
+3. Nas Instruções do Projeto (texto curto): releitura do mount sempre que o usuário sinalizar upload (tratando `.txt` soltos como entrada transitória a fundir nos documentos canônicos, não fonte permanente); registro de «Feedback para o ASU»; convenção de nome de download sem prefixo de pasta; lembrete de `.gitignore` na primeira leva de estrutura e de `README.md` quando a estrutura estabilizar.
+
+A regra ad hoc deste projeto ("ASU pode ser escolhido usar dependendo do tamanho do arquivo, pequenos arquivos não valem a pena", registrada em IDEAS.md em 2026-06-30) é **substituída** pela lógica por categoria do kit — mais principiada que um limiar de tamanho puro, e coincidentemente na mesma direção sugerida como feedback. Ver nota de fechamento em IDEAS.md.
+
+### Alternativas consideradas
+- **Reescrever CEREBRO.md do zero a partir do template** — rejeitada: jogaria fora nada de errado (o resto do arquivo é idêntico), e o próprio CEREBRO instrui "preserve a estrutura que já existe... adapte só as camadas universal/transversal". Feita só a inserção cirúrgica das duas seções novas.
+- **Manter a regra antiga de limiar por tamanho em paralelo à nova do kit** — rejeitada: as duas regras dão respostas diferentes em alguns casos (ex.: um arquivo pequeno mas rolante, como um `IDEAS.md` ainda curto, deveria ser sempre arquivo inteiro pela regra do kit, mas a regra de tamanho sozinha não capturaria isso) — manter as duas geraria ambiguidade. A regra do kit generaliza melhor.
+
+### Consequências
+`CEREBRO.md` e as Instruções do Projeto crescem (~13 linhas e ~2KB, respectivamente) mas continuam dentro do teto de caracteres esperado. Nenhum código do produto muda — é puramente comportamento do assistente. A partir de agora, toda entrega ASU (quando/se este projeto vier a usar patches cirúrgicos de fato — até aqui, todas as edições foram pequenas o bastante para ir como arquivo inteiro, então a mecânica de ASU ainda não foi exercitada na prática neste projeto) segue o novo formato `.yaml` para baixar.
