@@ -111,7 +111,7 @@ Conexões visuais são uma camada SVG absoluta sobre o canvas, calculando paths 
 - **Uma entidade, múltiplas visões:** Block único, projeções diferentes — ver DEC-002.
 - **tldraw v3 como motor de canvas:** shapes customizados via ShapeUtil — ver DEC-001.
 - **Orama no cliente:** busca < 5ms sem round-trip ao servidor (enhancement de performance, não requisito de offline) — ver DEC-005.
-- **Busca híbrida com RRF:** keyword (Orama + FTS5) + semântico (pgvector), fusão por Reciprocal Rank Fusion — ver DEC-006.
+- **Busca híbrida com RRF:** keyword (Orama client-side + full-text search do Postgres) + semântico (pgvector), fusão por Reciprocal Rank Fusion — ver DEC-006 (nota de terminologia pós-DEC-011: FTS5/SQLite citado na decisão original não existe mais).
 - **Monorepo Turborepo:** packages compartilhados entre web e api — ver DEC-007.
 - **Supabase como provedor único de banco + auth + storage:** Fastify mantido como camada de API sobre ele — ver DEC-012.
 - **Vercel para o frontend:** zero configuração para Next.js 16 — ver DEC-013.

@@ -87,7 +87,9 @@ Histórico de versões gratuito (log de patches do Automerge = time-travel). Mer
 ---
 
 ## DEC-005 — Orama 3.x para busca client-side
-**Data:** 2026-06-05 · **Status:** aceita
+**Data:** 2026-06-05 · **Status:** aceita · **nota de terminologia pós-DEC-011 (2026-06-26)**
+
+> Escrita originalmente sob o modelo Local-First (busca 100% offline, fallback em SQLite/FTS5 local). Com o pivô para online-first (DEC-011), Orama passa a ser um *enhancement* de performance no cliente (evita round-trip a cada keystroke), não um requisito de funcionamento offline — e o "FTS5 do SQLite local" citado abaixo não existe mais neste projeto: o fallback de full-text real é o do Postgres (`tsvector`/GIN), no backend. A escolha do Orama em si continua válida; só a motivação "offline" e o fallback local ficaram desatualizados. Corpo original mantido abaixo por registro histórico do raciocínio.
 
 ### Contexto
 A busca precisa ser instantânea (< 5ms) e funcionar offline. Round-trips ao servidor para cada keystroke são inaceitáveis. Precisamos de um motor de busca que rode inteiramente no browser.
@@ -106,7 +108,9 @@ Busca offline completa sem servidor. Orama suporta inserção incremental (novo 
 ---
 
 ## DEC-006 — Busca híbrida com Reciprocal Rank Fusion (RRF)
-**Data:** 2026-06-05 · **Status:** aceita
+**Data:** 2026-06-05 · **Status:** aceita · **nota de terminologia pós-DEC-011 (2026-06-26)**
+
+> Mesma ressalva do DEC-005: "Orama + FTS5 funcionam offline" (texto original abaixo) deve ser lido hoje como "Orama (client) + full-text search do Postgres (backend)" — o fallback local via SQLite/FTS5 nunca chegou a existir e não existirá (ver DEC-011). A estratégia de fusão RRF em si (keyword + semântico) continua exatamente como decidida.
 
 ### Contexto
 Busca por keyword perde resultados semanticamente relacionados ("aprendizado de máquina" não encontra nota sobre "machine learning"). Busca semântica pura perde resultados exatos por título. Precisamos do melhor dos dois mundos.
@@ -123,6 +127,7 @@ No backend, executar keyword search (PostgreSQL FTS) e semantic search (pgvector
 Qualidade de busca significativamente superior à maioria das ferramentas do mercado. Custo: pipeline de embeddings (chunking → API OpenAI → pgvector) adiciona latência e custo por token. Mitigação: indexar assincronamente com debounce; usar `text-embedding-3-small` (mais barato).
 
 ---
+
 
 ## DEC-007 — Monorepo com Turborepo
 **Data:** 2026-06-05 · **Status:** aceita

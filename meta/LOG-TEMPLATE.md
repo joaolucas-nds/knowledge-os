@@ -2,7 +2,7 @@
 
 > **Referência fixa.** Este arquivo é o MOLDE — não é substituído.
 > Ao final de cada sessão, o assistente entrega um arquivo novo `logs/AAAA-MM-DD.md` preenchido neste formato.
-> Os logs vivem em `logs/` no Git (NÃO no Projeto) e são lidos só sob demanda — quando você precisar recuperar o detalhe de uma sessão antiga.
+> Os logs vivem em `logs/` no Git (NÃO no Projeto) e são lidos só sob demanda — quando precisar recuperar o detalhe de uma sessão antiga.
 
 ---
 

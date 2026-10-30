@@ -24,15 +24,15 @@
 
 ## 🔵 F1 — Core de Notas *(futura)*
 **Objetivo:** O produto precisa existir como editor de notas antes de qualquer canvas. Editor rico, hierarquia, wikilinks e sincronização básica.
-**Critério de conclusão:** Criar nota com Tiptap, navegar pela hierarquia na sidebar, escrever `[[wikilink]]` e ver backlinks aparecerem — tudo funcionando offline.
+**Critério de conclusão:** Criar nota com Tiptap, navegar pela hierarquia na sidebar, escrever `[[wikilink]]` e ver backlinks aparecerem — tudo persistindo no Postgres via `apps/api`.
 **Estimativa:** Semanas 3–5
 
 - [ ] Integrar Tiptap v2 com extensões base.
 - [ ] Slash commands (`/note`, `/database`, `/canvas`, `/heading`).
-- [ ] `[[wikilinks]]` com autocomplete e criação automática de `relation` no SQLite.
+- [ ] `[[wikilinks]]` com autocomplete e criação automática de `relation` via `apps/api` (Postgres).
 - [ ] Hierarquia de páginas via `parent_id` (sidebar tree com drag-and-drop).
 - [ ] CRUD completo de Blocks (create, read, update, soft delete).
-- [ ] Sincronização simples com backend (save on change + debounce 500ms).
+- [ ] Sincronização com backend (save on change + debounce 500ms) — sem cópia local persistente (ver DEC-011).
 - [ ] Export de nota como Markdown.
 
 ---
@@ -48,7 +48,7 @@
 - [ ] `CanvasEdges`: SVG overlay com A* pathfinding e labels editáveis.
 - [ ] `CanvasToolbar`: ferramentas com hotkeys (V/H/N/T/P/C).
 - [ ] Spatial index RBush: frustum culling + LOD (`full | thumb | dot`).
-- [ ] Persistência de `canvas_nodes` e `canvas_edges` no SQLite.
+- [ ] Persistência de `canvas_nodes` e `canvas_edges` no Postgres (via `apps/api`).
 - [ ] `NodeInspector`: props, backlinks e style panel ao selecionar shape.
 
 ---
@@ -68,7 +68,7 @@
 ---
 
 ## 🔵 F4 — Busca Global *(futura)*
-**Objetivo:** Paleta ⌘K com busca instantânea offline cobrindo notas, canvas e tabelas.
+**Objetivo:** Paleta ⌘K com busca instantânea (Orama client-side, com fallback no backend) cobrindo notas, canvas e tabelas.
 **Critério de conclusão:** Abrir ⌘K, digitar 3 letras, ver resultados com snippet highlight em < 100ms, clicar e o canvas ir direto ao nó.
 **Estimativa:** Semanas 14–16
 
@@ -76,7 +76,7 @@
 - [ ] Atualização incremental do índice a cada mutação de Block.
 - [ ] `SearchPalette` (⌘K): UI com navegação por teclado, highlight e preview.
 - [ ] `useJumpToNode`: mover viewport do tldraw para o nó encontrado via camera API.
-- [ ] FTS5 fallback para conteúdo não-indexado pelo Orama.
+- [ ] Fallback de full-text search do Postgres (`tsvector`/GIN) para conteúdo não-indexado pelo Orama.
 - [ ] Filtros por tipo (notas, canvas, tabelas, pages).
 - [ ] Histórico de buscas recentes (IndexedDB).
 
